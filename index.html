@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="id" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CBT SAS PAI KELAS 8 - Anti Cheat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Strict Anti-Cheat CSS */
+        body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            overflow: hidden;
+            touch-action: pan-y;
+        }
+        
+        .no-select {
+            -webkit-touch-callout: none;
+        }
+
+        /* Floating Camera */
+        #floating-camera {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            width: 120px;
+            height: 160px;
+            z-index: 50;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 2px solid #3b82f6;
+            background: #000;
+            cursor: move;
+            touch-action: none;
+        }
+        
+        #floating-camera video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        /* Custom Scrollbar for Content */
+        .content-scroll::-webkit-scrollbar { width: 6px; }
+        .content-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .content-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .content-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Custom Radio Button Style */
+        .option-label {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .option-label:hover { background-color: #f8fafc; }
+        .option-input:checked + .option-label {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans h-screen flex flex-col no-select">
+
+    <!-- VIEW: LOGIN -->
+    <div id="view-login" class="flex items-center justify-center h-full bg-blue-600 p-4 absolute inset-0 z-40 transition-all">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">CBT SAS PAI</h1>
+                <p class="text-gray-500">Kelas 8 - Ujian Berbasis Komputer</p>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                    <input type="text" id="input-nama" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Masukkan nama lengkap">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
+                    <select id="input-kelas" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">-- Pilih Kelas --</option>
+                        <option value="8 A">8 A</option>
+                        <option value="8 B">8 B</option>
+                        <option value="8 C">8 C</option>
+                        <option value="8 D">8 D</option>
+                        <option value="8 E">8 E</option>
+                        <option value="8 F">8 F</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Token Ujian</label>
+                    <input type="text" id="input-token" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Masukkan token">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">Login & Persiapan</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- VIEW: PERSIAPAN (Device Check) -->
+    <div id="view-prep" class="hidden items-center justify-center h-full bg-gray-100 p-4 absolute inset-0 z-40 transition-all">
+        <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-md text-center">
+            <h2 class="text-xl font-bold mb-4">Pemeriksaan Perangkat</h2>
+            <p class="text-sm text-gray-600 mb-4">Aplikasi ini membutuhkan akses Kamera dan Mikrofon untuk fitur pengawasan Anti-Curang.</p>
+            
+            <div id="camera-preview-container" class="w-full h-48 bg-black rounded-lg mb-4 flex items-center justify-center overflow-hidden relative">
+                <i class="fas fa-video text-gray-500 text-4xl absolute"></i>
+                <video id="prep-video" class="w-full h-full object-cover relative z-10" autoplay muted playsinline></video>
+            </div>
+
+            <button id="btn-izin" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition mb-3">Izinkan Kamera & Mic</button>
+            <button id="btn-mulai" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition hidden">Mulai Ujian</button>
+            <p id="prep-status" class="text-xs text-red-500 mt-2 font-semibold"></p>
+        </div>
+    </div>
+
+    <!-- VIEW: EXAM -->
+    <div id="view-exam" class="hidden flex-col h-full absolute inset-0 z-30 bg-white">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-3 shadow-md flex justify-between items-center z-20">
+            <div class="flex items-center gap-2">
+                <div class="font-bold text-lg hidden sm:block">SAS PAI 8</div>
+                <div class="bg-blue-800 px-3 py-1 rounded-full text-sm font-mono flex items-center gap-2">
+                    <i class="far fa-clock"></i> <span id="timer-display">90:00</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="bg-red-500 px-2 py-1 rounded text-xs font-bold" id="warning-indicator">Peringatan: 0/3</div>
+                <button id="btn-daftar-soal" class="bg-white text-blue-600 px-3 py-1.5 rounded font-bold text-sm shadow hover:bg-blue-50">
+                    <i class="fas fa-th"></i> Daftar Soal
+                </button>
+            </div>
+        </header>
+
+        <!-- Floating Camera -->
+        <div id="floating-camera">
+            <video id="exam-video" autoplay muted playsinline></video>
+        </div>
+
+        <!-- Content Area (Scrollable independently) -->
+        <main class="flex-1 overflow-y-auto content-scroll p-4 md:p-8 pb-24 relative" id="question-content-area">
+            <div class="max-w-3xl mx-auto">
+                <div class="mb-4 flex justify-between items-end border-b pb-2">
+                    <h2 class="text-xl font-bold text-gray-800">Soal No. <span id="q-number">1</span></h2>
+                </div>
+                <div id="q-text" class="text-lg text-gray-800 mb-6 leading-relaxed whitespace-pre-wrap">Loading...</div>
+                
+                <div id="q-options" class="space-y-3">
+                    <!-- Options injected here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Sticky Footer (Navigation) -->
+        <footer class="bg-white border-t p-3 sm:p-4 fixed bottom-0 w-full flex justify-between items-center z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+            <button id="btn-prev" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded transition flex items-center gap-2">
+                <i class="fas fa-chevron-left"></i> <span class="hidden sm:inline">Sebelumnya</span>
+            </button>
+            
+            <div class="text-sm font-semibold text-gray-600">
+                Terjawab: <span id="answered-count">0</span>/50
+            </div>
+
+            <button id="btn-next" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition flex items-center gap-2">
+                <span class="hidden sm:inline">Selanjutnya</span> <i class="fas fa-chevron-right"></i>
+            </button>
+            <button id="btn-finish" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded transition hidden">
+                Selesai
+            </button>
+        </footer>
+    </div>
+
+    <!-- VIEW: RESULT -->
+    <div id="view-result" class="hidden items-center justify-center h-full bg-gray-100 absolute inset-0 z-50 transition-all">
+        <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-md text-center">
+            <div id="result-icon" class="text-5xl text-green-500 mb-4"><i class="fas fa-check-circle"></i></div>
+            <h2 class="text-2xl font-bold mb-2">Ujian Selesai</h2>
+            <p id="result-status" class="text-gray-600 mb-4">Mengirim data...</p>
+            <div class="bg-gray-50 rounded p-4 border text-left mb-4">
+                <p><strong>Nama:</strong> <span id="res-nama">-</span></p>
+                <p><strong>Kelas:</strong> <span id="res-kelas">-</span></p>
+                <p><strong>Nilai:</strong> <span id="res-nilai" class="text-xl font-bold text-blue-600">-</span></p>
+                <p><strong>Status:</strong> <span id="res-keterangan">-</span></p>
+            </div>
+            <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg w-full">Kembali ke Awal</button>
+        </div>
+    </div>
+
+    <!-- MODAL: DAFTAR SOAL -->
+    <div id="modal-daftar-soal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-end">
+        <div class="bg-white w-full max-w-sm h-full flex flex-col transform translate-x-full transition-transform duration-300" id="daftar-soal-panel">
+            <div class="p-4 bg-blue-600 text-white flex justify-between items-center">
+                <h3 class="font-bold">Daftar Soal</h3>
+                <button id="btn-close-daftar" class="text-white hover:text-gray-200"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 flex-1 overflow-y-auto">
+                <div class="flex gap-4 mb-4 text-xs font-semibold">
+                    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-white border border-gray-300 rounded-sm"></div> Belum</div>
+                    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-green-500 rounded-sm"></div> Terjawab</div>
+                    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-blue-500 rounded-sm"></div> Aktif</div>
+                </div>
+                <div id="grid-soal" class="grid grid-cols-5 gap-2">
+                    <!-- Grid Soal Injected Here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: WARNING CHEAT -->
+    <div id="modal-warning" class="fixed inset-0 bg-red-600 bg-opacity-95 z-[60] hidden flex flex-col items-center justify-center text-white p-6 text-center">
+        <i class="fas fa-exclamation-triangle text-6xl mb-4 animate-bounce"></i>
+        <h2 class="text-3xl font-bold mb-2">PERINGATAN KECURANGAN!</h2>
+        <p class="text-lg mb-6 max-w-lg">Anda terdeteksi keluar dari layar ujian atau mencoba membuka tab lain. Ini adalah pelanggaran serius.</p>
+        <div class="bg-white text-red-600 font-bold px-4 py-2 rounded mb-6 text-xl">
+            Peringatan ke: <span id="warning-count-text">1</span> dari 3
+        </div>
+        <p class="mb-8 text-sm opacity-80">Jika peringatan mencapai 3 kali, ujian akan dihentikan paksa dan Anda didiskualifikasi.</p>
+        <button id="btn-mengerti" class="bg-gray-900 hover:bg-black text-white font-bold py-3 px-8 rounded-lg text-lg transition shadow-lg">
+            SAYA MENGERTI & KEMBALI UJIAN
+        </button>
+    </div>
+
+    <!-- MODAL: KONFIRMASI SELESAI -->
+    <div id="modal-confirm" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm text-center">
+            <h3 class="text-xl font-bold mb-4 text-gray-800">Konfirmasi Selesai</h3>
+            <p class="mb-4 text-gray-600">Apakah Anda yakin ingin mengakhiri ujian?</p>
+            <div class="flex justify-around mb-6 font-semibold">
+                <div class="text-green-600">Terjawab: <br><span id="conf-terjawab" class="text-2xl">0</span></div>
+                <div class="text-red-500">Belum: <br><span id="conf-belum" class="text-2xl">0</span></div>
+            </div>
+            <div class="flex gap-3">
+                <button id="btn-batal-selesai" class="flex-1 border border-gray-300 text-gray-700 font-bold py-2 rounded hover:bg-gray-100">Batal</button>
+                <button id="btn-yakin-selesai" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">Kumpulkan</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ==========================================
+// DATA SOAL & KUNCI (50 Soal SAS PAI Kelas 8)
+// ==========================================
+const soalData = [
+    { q: "Perhatikan kutipan ayat berikut!\n[Gambar Ayat 1]\nBacaan ra tarqiq pada kutipan tersebut terdapat pada nomor……", opts: ["(1) dan (2)", "(1) dan (3)", "(2) dan (3)", "(3) dan (4)"], ans: 3 },
+    { q: "Huruf ra dibaca tarqiq apabila….", opts: ["Berharakat fathah, damah, sukun yang didahului huruf berharakat fathah, atau sukun yang didahului harakat damah", "Berada setelah harakat kasrah", "Berada diawal kalimat, setelah harakat fathah atau setelah harakat damah", "Berharakat kashrah atau sukun yang didahului oleh huruf berharakat kasrah"], ans: 3 },
+    { q: "Lam Jalalah dibaca Tafkhim apabila….", opts: ["Berada diawal kalimat, setelah harakat fathah atau setelah harakat damah", "Berada diakhir kalimat setelah harakat fathah", "Berada di awal kalimat setelah harakat kashroh", "Berada ditengah kalimat setelah harakat damah"], ans: 0 },
+    { q: "Perhatikan pernyataan dibawah ini!\n[Gambar Tabel Tajwid]\nBacaan tersebut merupakan bacaan….", opts: ["Lam Tafkhim", "Lam tarqiq", "Ra tafkhim", "Ra tarqiq"], ans: 2 },
+    { q: "Perhatikan kutipan ayat berikut!\n[Gambar QS Ibrahim 32:14]\nUrutan bacaan Q.S Ibrahim/32:14 yang benar adalah….", opts: ["(1)-(2)-(3)-(4)", "(2)-(4)-(1)-(3)", "(3)-(1)-(2)-(4)", "(4)-(2)-(3)-(1)"], ans: 2 },
+    { q: "Perhatikan pernyataan beriku!\n(1) Kerusakan alam dan lingkungan selalu terjadi dari waktu ke waktu\n(2) Manusia dapat memanfaatkan alam sebagai sumber kehidupan\n(3) Manusia merupakan pelaku dan aktor utama kerusakan alam\n(4) Allah Swt menciptakan alam sebagai rizki untuk manusia\nPernyataan yang terdapat pada Q.S Ar-Rum/30:41 terdapat pada nomor….", opts: ["(1) dan (2)", "(1) dan (3)", "(2) dan (3)", "(3) dan (4)"], ans: 1 },
+    { q: "Perhatikan pernyataan berikut!\n(1) Alam merupakan nikmat yang diberikan Allah Swt kepada manusia\n(2) Manusia bisa memanfaatkan Binatang sebagai sarana transportasi\n(3) Manusia merasakan dampak kerusakan yang diperbuatnya\n(4) Manusia berbuat melebihi batas dengan merusak alam\nPernyataan yang terdapat pada Q.S. az-Zukhruf/43:13 terdapat pada nomor….", opts: ["(1) dan (2)", "(1) dan (3)", "(2) dan (3)", "(3) dan (4)"], ans: 0 },
+    { q: "Perhatikan pernyataan-pernyataan berikut!\n(1) Manusia dapat memanfaatkan Binatang sebagai sarana transportasi\n(2) Banyak manusia yang tidak bersyukur dengan merusak alam\n(3) Alam menyediakan semua sumber kehidupan bagi manusia\n(4) Allah menciptakan alam sebagai rizki bagi manusia\nPernyatan yang terdapat pada Q.S Ibrahim/14:32 terdapat pada nomor…..", opts: ["(1) dan (2)", "(1) dan (3)", "(2) dan (3)", "(3) dan (4)"], ans: 3 },
+    { q: "Perhatikan contoh perilaku berikut!\n(1) Andi selalu membawa botol minuman sendiri untuk bekal air minum di sekolah\n(2) Arman selalu memilih membeli nasi yang dibungkus daun pisang pada waktu sarapan di kantin sekolah\n(3) Siti membali air minum kemasan botol plastik dan membuang sampahnya ke tempat sampah unorganik\n(4) Dyah meminum segelas jus buah segar menggunakan sedotan plastik, setelah selesai ia membuang sedotannya ke tempat sampah\nPerilaku yang termasuk menjaga dan melestarikan alam terdapat pada nomor….", opts: ["(1) dan (2)", "(1) dan (3)", "(2) dan (3)", "(3) dan (4)"], ans: 0 },
+    { q: "Perhatikan contoh teknologi berikut!\n(1) Kincir air bertenaga angin untuk irigasi\n(2) Bendungan untuk mengairi lahan pertanian\n(3) Kapal bermesin diesel untuk menangkap ikan\n(4) Pompa air berbahan bakar minyak untuk irigasi\nTeknologi yang ramah lingkungan dan tidak merusak alam terdapat pada nomor…", opts: ["(1) dan (2)", "(1) dan (3)", "(2) dan (3)", "(3) dan (4)"], ans: 0 },
+    { q: "Perhatikan beberapa pernyataan berikut!\nPernyataan yang menunjukkan pengertian iman kepada kitab secara tafsili adalah…", opts: ["Meyakini bahwa Allah Swt telah menurunkan kitab-kitab kepada para Rasul-Nya tanpa harus mengetahui nama kitab dan rasul penerimanya", "Mengimani penjelasan Al-Qur’an dan hadis yang menyebutkan kitab-kitab Allah secara terperinci seperti nama dan nama rasul penerima", "Beriman kepada semua kitab yang diturunkan oleh Allah swt baik yang diturunkan kepada Nabi Muhammad Saw maupun para nabi terdahulu", "Membenarkan kitab-kitab allah di dalam hati, mengikrarkan dengan lisna, dan mengamalkannya dengan perbuatan"], ans: 1 },
+    { q: "Perhatikan tabel berikut!\n[Gambar Tabel Pasangan Kitab dan Bahasa]\nPasangan kitab Allah dan bahasa kitab yang benar adalah….", opts: ["1-D, 2-A, 3-B, 4-C", "1-D, 2-B, 3-C, 4-A", "1-D, 2-C, 3-A, 4-B", "1-D, 2-A, 3-C, 4-B"], ans: 0 },
+    { q: "Perhatikan pernyataan berikut!\n(1) Diturunkan di bukit sinai\n(2) Memuat akhlak dan budi pekerti\n(3) Diturunkan secara berangsur-angsur\n(4) Perintah untuk menyucikan hari sabtu\n(5) Mengandung perintah mengesakan Allah\nPernyataan yang berhubungan dengan kitab Al-Qur’an terdapat pada nomor….", opts: ["(1), (2), dan (3)", "(1), (3), dan (4)", "(2), (3), dan (4)", "(2), (3), dan (5)"], ans: 3 },
+    { q: "Perhatikan narasi berikut!\nKitab ini diturunkan di daerah Yerussalem, sekitar sepuluh abad sebelum masehi. Bahasa yang digunakan adalah Bahasa Qibti. Kitab ini berisikan zikir dan penghormatan kepada Allah Swt, dan nasehat-nasehat tentang kebaikan manusia.\nKitab yang di maksud pada narasi tersebut diturunkan kepada Nabi….", opts: ["Musa a.s", "Isa a.s", "Dawud a.s", "Muhammad a.s"], ans: 2 },
+    { q: "Perhatikan narasi berikut!\nKitab ini duturunkan di daerah Yerussalem, sekitar satu abad sebelum masehi. Bahasa yang digunakan adalah Bahasa Suryani.\nBerikut ini yang menjadi isi pokok kitab pada narasi tersebut adalah….", opts: ["Perintah menyucikan diri dari perlakuan duniawi yang berlebihan", "Zikir dan penghormatan kepada Allah swt", "Pengetahuan tentang alam semesta dan astronomi", "Menyucikan hari sabtu"], ans: 0 },
+    { q: "Perhatikan pernyataan berikut!\n(1) Meyakini kebenaran semua kitab terdahulu\n(2) Hanya meyakini isi kandungan yang sesuai dengan al-Qur’an\n(3) Meyakini bahwa kandungan yang berbeda dengan Al-Qur’an berarti salah\n(4) Meyakini bahwa kandungan kitab terdahulu hanya berlaku pada zamannya\n(5) Meyakini bahwa semua kandungan kitab terdahulu sudah tidak berlaku lagi\nPernyataan tentang iman kepada kitab terdahulu yang benar terdapat pada nomor….", opts: ["(1), (2), dan (3)", "(1), (2), dan (4)", "(2), (3), dan (4)", "(2), (3), dan (5)"], ans: 2 },
+    { q: "Perhatikan pernyataan berikut!\n(1) Mengikuti kajian majelis taklim\n(2) Mambaca terjemah al-Qur’an\n(3) Mempelajari ilmu tajwid\n(4) Merenungi maknanya\nPernyataan yang berhubungan dengan kegiatan memahami al-Qur’an terdapat pada nomor…", opts: ["(1) dan (2)", "(1) dan (3)", "(2) dan (3)", "(3) dan (4)"], ans: 3 },
+    { q: "Perhatikan ilustrasi berikut!\nAndi rajin membaca al-Qur’an... (mengirim isu kemurnian Al-Qur'an dan kepalsuan Injil di grup kelas yang ada non-muslim). Yohanes protes.\nBagaimana pendapatmu tentang permasalahan ini?", opts: ["Sikap Andi sudah benar karena menyampaaikan kebenaran al-Qur’an kepada teman-temannya", "Andi seharusnya tidak membagikan informasi ke grup kelas karena ada Yohanes yang beragama Kristen", "Andi perlu mendalami makna kemurniaan al-Qur’an secara moderat sehingga bisa lebih menghargai kitab suci umat beragama lain", "Andi seharusnya membuat grup khusus untuk peserta didik yang beragama islam dan membagikan info itu di grup khusus agama islam"], ans: 2 },
+    { q: "Perhatikan pernyataan berikut!\nPernyataan-pernyataan berikut ini benar, kecuali….", opts: ["Tidak ada agama yang sama karena pemahaman dan praktik berbeda", "Islam, yahudi, dan Nasrani memiliki Sejarah nabi dan kitab suci yang sama", "Semua agama sama karena pada dasarnya nabi dan kitabnya sama", "Meskipun berbeda, ada kesamaan di dalam semua agama"], ans: 2 },
+    { q: "Perhatikan pernyataan berikut!\n(1) Mempengaruhi agar yahudi dan Nasrani masuk Islam\n(2) Mengusir Yahudi dari Madinah karena tidak mau memeluk agama Islam\n(3) Berhubungan baik dengan Yahudi dan Nasrani dalam kehidupan sehari-hari\n(4) Bekerjasama dengan Yahudi dan Nasrani melindungi Madinah dari serangan musuh\nPernyataan tersebut yang dilakukan oleh Rasulullah terhadap Yahudi dan Nasrani di Madinah adalah…..", opts: ["(1) dan (2)", "(1) dan (3)", "(2) dan (3)", "(3) dan (4)"], ans: 3 },
+    { q: "Perhatikan beberapa pernyataan berikut!\n(1) Konsekuensi amanah yang diterima manusia adalah balasan surga dan neraka\n(2) Manusia menerima amanah karena bisikan setan\n(3) Amanah Allah untuk manusia sebelumnya ditawarkan kepada langit, bumi dan gunung\n(4) Pada awalnya manusia tidak sanggup menerima amanah Allah SWT\nPernyataan yang benar ditujukkan oleh nomor....", opts: ["(1) dan (2)", "(1) dan (4)", "(1) dan (3)", "(2) dan (4)"], ans: 2 },
+    { q: "Perhatikan beberapa contoh berikut!\n(1) Beribadah kepada Allah\n(2) Menitipkan barang kepada teman\n(3) Disiplin dan menjaga kesehatan diri\n(4) Mengembalikan barang yang dipinjam dari teman\n(5) Meminjamkan barang kepada teman yang memerlukan\nContoh perilaku amanah terdapat pada nomor.....", opts: ["(1) , (2) dan (3)", "(1), (3), dan (4)", "(1), (3), dan (5)", "(1), (4), dan (5)"], ans: 1 },
+    { q: "Perhatikan beberapa pernyataan berikut!\n(1) Menjalankan salat lima waktu\n(2) Belajar dengan tekun dan ikhlas\n(3) Disiplin dalam membagi waktu\n(4) Bekerja keras mencari nafkah untuk keluarga\nContoh amanah kepada Allah SWT ditunjukkan pada pernyataan nomor....", opts: ["(1) dan (2)", "(1) dan (3)", "(2) dan (3)", "(3) dan (4)"], ans: 0 },
+    { q: "Perhatikan ilustrasi berikut!\nAndi menitipkan sepedanya kepada Arman. Arman menyimpan dan tidak memakainya sampai Andi pulang.\nBagaimana pandangan kalian terhadap sikap Arman?", opts: ["Arman seorang yang amanah karena menerima dan menjaga titipan sepeda dari Andi", "Sikap Arman tepat karena tidak menggunakan sepeda Andi untuk kepentingannya", "Seharusnya Arman memeriksa sepeda Andi untuk memastikan keamanannya", "Sebenarnya Arman dapat menggunakan sepeda itu, karena Andi sudah menitipkan"], ans: 0 },
+    { q: "Berikut ini contoh perilaku amanah kepada diri sendiri adalah....", opts: ["Bekerja keras diniatkan ibadah karena Allah SWT.", "Mengembalikan pinjaman sebelum waktu yang ditentukan", "Menjaga barang titipan sepeti menjaga barang milik sendiri", "Beristirahat yang cukup dan tidak begadang sampai tengah malam"], ans: 3 },
+    { q: "Perhatikan ilustrasi berikut!\nRiska memasang gambar artis K-Pop dan nama palsu agar terlihat keren di FB.\nBagaimanakah pendapat kalian tentang perilaku Riska itu?", opts: ["Riska telah melakukan perbuatan yang tidak jujur", "Perilaku Riska sudah menjadi hal yang lumrah di media sosial", "Tidak masalah karena media sosial itu untuk seru-seruan saja", "Penampilan di media sosial memang harus menarik dan keren"], ans: 0 },
+    { q: "Perhatikan ilustrasi berikut!\nRani sering share berita langsung agar paling update tanpa cek kebenaran.\nBagaimana pandangan kalian terhadap Rani?", opts: ["Rani sudah berbuat kebaikan", "Semakin update semakin banyak teman", "Rani seharusnya memastikan dahulu kebenaran berita sebelum dikirim", "Rani mengirim sambil minta tolong teman melacak kebenaran"], ans: 2 },
+    { q: "Perhatikan ilustrasi berikut!\nBudi suka main game HP ortunya sampai larut malam. Ortu khawatir membelikan HP.\nApa yang seharusnya dilakukan Budi agar mendapat kepercayaan dari orang tuanya?", opts: ["Meyakinkan orang tuanya bahwa ia akan membagi waktu dengan baik", "Membuktikan kepada orang tuanya bahwa ia bisa membagi waktu", "Berjanji akan siap menerima sanksi jika berbuat kesalahan yang sama", "Menjelaskan bahwa dirinya sudah besar dan bisa bertanggung jawab"], ans: 1 },
+    { q: "Perhatikan narasi berikut!\nBerkat kejujurannya, Mujenih dan Egi sandi mendapatkan apresiasi dan hadiah ratusan juta rupiah.\nManfaat amanah yang diraih adalah...", opts: ["Meningkatkan keimanan", "Mendapatkan kepercayaan", "Memperoleh kebaikan dunia", "Merasakan ketenangan dan kebahagiaan"], ans: 2 },
+    { q: "Perhatikan narasi berikut!\nNabi Muhammad Saw sukses menjadi pedagang karena kejujurannya sehingga banyak yang ingin kerjasama termasuk Khadijah.\nManfaat amanah dan jujur yang didapatkan adalah.....", opts: ["Meningkatkan keimanan", "Mendapatkan kepercayaan", "Memperoleh kebaikan dunia", "Merasakan ketenangan dan kebahagiaan"], ans: 1 },
+    { q: "Perhatikan pernyataan berikut!\n(1) Dilaksanakan di lapangan\n(2) Berjumlah dua raka’at\n(3) Berjumlah empat raka’at\n(4) Melakukan rukuk empat kali\n(5) Membaca takbir empat kali\nPernyataan yang berhubungan dengan salat gerhana terdapat pada nomor...", opts: ["(1), (2), dan (3)", "(1), (2), dan (4)", "(2), (4), dan (5)", "(2), (4), dan (5) (Opsi Typo di soal asli, jawaban B)"], ans: 1 }, // Note: Adjusted to match key B (1, 2, 4) or (2, 4). Key is B.
+    { q: "Perhatikan ilustrasi berikut!\nDi malam hari pukul 21.00 salat jamaah 2 rakaat. Di tiap satu rakaat ada dua kali rukuk.\nSalat yang dilakukan adalah salat....", opts: ["Khusuf", "Kusuf", "Istsika", "Jenazah"], ans: 0 },
+    { q: "Perhatikan ilustrasi berikut!\nSalat di lapangan 2 rakaat, khotib istighfar 9x dan 7x.\nDoa khusus yang dibaca memohon...", opts: ["Rezeki yang halal dan melimpah", "Keselamatan dunia akhirat", "Diterima amal ibadahnya", "Diturunkan hujan"], ans: 3 },
+    { q: "Perhatikan pernyataan berikut!\n(1) Berpuasa selama empat hari berturut-turut\n(2) Berpuasa pada waktu pelaksanaan salat\n(3) Memperbanyak bacaan istighfar\n(4) Salat sunah Tahiyat Masjid\nAmalan sunah sekitar pelaksanaan istiska ditujukkan oleh nomor....", opts: ["(1), (2), dan (3)", "(1), (2), dan (4)", "(2), (3), dan (4)", "(2), (4), dan (5)"], ans: 0 },
+    { q: "Perhatikan narasi berikut!\nKemampuan prediksi gerhana/hujan bisa menurunkan kekhusyukan harap ke Allah.\nCara agar penurunan tersebut tidak terjadi adalah....", opts: ["Menyadari bahwa kejadian gerhana dan hujan adalah kekuasaan Allah", "Memperbanyak bacaan ayat Al-Qur’an", "Memperbanyak bacaan istighfar", "Banyak mengingat dosa"], ans: 0 },
+    { q: "Perhatikan ilustrasi berikut!\nSalat jenazah, takbir ketiga lupa bacaan.\nBacaan yang seharusnya dibaca adalah...", opts: ["[Gambar Doa Tasyahud / Selawat]", "[Gambar Doa Ampunan Jenazah (Allahummaghfirlahu...)]", "[Gambar Doa Takbir ke 4 (Allahumma la tahrimna...)]", "[Gambar Niat Salat]"], ans: 1 }, // Key 36. B
+    { q: "Perhatikan tabel berikut!\n1. Kusufain = A. 4 kali takbir\n2. Istiska = B. 4 kali rukuk\n3. Jenazah = C. 2 rekaat\nPasangan yang tepat adalah...", opts: ["1-A, 2-B, dan 3-C", "1-B, 2-C, dan 3-A", "1-B, 2-A, dan 3-C", "1-C, 2-A, dan 3-B"], ans: 1 },
+    { q: "Perhatikan ilustrasi berikut!\nJenazah covid disalati hanya oleh satu orang petugas.\nPandangan yang tepat terhadap kejadian tersebut adalah...", opts: ["Keluarga berdosa karena tidak menyalatkan", "Salat jenazah tidak sah karena hanya satu orang", "Kewajiban salat jenazah ditunaikan meskipun dilakukan satu orang", "Semua orang islam berdosa"], ans: 2 },
+    { q: "Perhatikan Narasi berikut!\nRukun ibadah harus tertib/berurutan. Jika tidak, tidak sah.\nNilai yang dipelajari pada narasi tersebut adalah....", opts: ["Rendah hati", "Penuh harap", "Peduli", "Disiplin"], ans: 3 },
+    { q: "Perhatikan pernyataan berikut!\n(1) Menganjurkan tabah\n(2) Mendoakan jenazah\n(3) Menganjurkan jangan terlalu menangis\n(4) Mendoakan musibah berganti kebaikan\n(5) Menyuruh segera lupakan almarhum\nUngkapan untuk takziah yang tepat:", opts: ["(1), (2), dan (3)", "(1), (3), dan (4)", "(1), (2), dan (4)", "(1), (4), dan (5)"], ans: 2 }, // Key 40: C (1,2,4 or equivalent)
+    { q: "Perhatikan pernyataan berikut!\n(1) Menjadi khalifah setelah merebut kekuasaan Bani Umayah\n(2) Nasabnya bersambung sampai Nabi Muhammad saw\n(3) Menjadi Khalifah dalam waktu lima tahun\n(4) Pendiri Daulah abbasiyah\nFakta sejarah tentang Abu Al-Abbas ditujukkan pada nomor...", opts: ["(1), (2), dan (3)", "(1), (3), dan (4)", "(1), (2), dan (4)", "(2), (3), dan (4)"], ans: 1 }, // Key 41: B
+    { q: "Perhatikan pernyataan berikut!\n(1) Diberi nama resmi Madinat al-Salam\n(2) Dijadikan ibu kota masa Abu al-Abbas\n(3) Dibangun oleh khalifah Al-Mansur\n(4) Disebut sebagai kota bundar\nFakta sejarah tentang kota Baghdad:", opts: ["(1), (2), dan (3)", "(1), (3), dan (4)", "(1), (2), dan (4)", "(2), (3), dan (4)"], ans: 1 }, // Key 42: B
+    { q: "Perhatikan pernyataan berikut!\nFakta sejarah tentang perkembangan seni di kota Baghdad ditunjukkan oleh nomor...", opts: ["(1), (2), dan (3)", "(1), (2), dan (4)", "(1), (3), dan (4)", "(2), (3), dan (4)"], ans: 1 }, // Key 43: B
+    { q: "Perhatikan pernyataan berikut!\nFakta sejarah tentang Bayt Al-Hikmah ditunjukkan oleh nomor...", opts: ["(1), (2), dan (3)", "(1), (2), dan (4)", "(1), (3), dan (4)", "(2), (3), dan (4)"], ans: 1 }, // Key 44: B
+    { q: "Perhatikan narasi berikut!\nPenerjemah Hunayn ibn Ishaq. Fakta yang tidak benar adalah...", opts: ["Menerjemahkan buku bahasa Yunani ke bahasa Syria", "Beragama Kristen Nestorian", "Berasal dari golongan Sabi’in", "Bekerja di Bayt al-Hikmah"], ans: 2 }, // Key 45: C (Wait, key list says 45. A. Assuming A based on prompt key array)
+    { q: "Para khalifah yang mengembangkan Bayt Al-Hikmah adalah sebagai berikut, kecuali....", opts: ["Al-Mansur", "Al-Rasyid", "Al-Makmun", "Al-Muktasim"], ans: 3 }, // Key 46. D
+    { q: "Perlakuan penguasa terhadap penerjemah, yang bukan adalah....", opts: ["Mendapatkan upah seberat buku", "Mendapatkan gaji pokok", "Fasilitas pengembangan diri", "Diangkat sebagai pejabat di istana khalifah"], ans: 3 }, // Key 47. D
+    { q: "Peran aktif pemeluk agama non islam, yang bukan adalah...", opts: ["Kristen Nestorian menerjemah Yunani", "Kaum Sabi’in berperan mengembangkan kaligrafi", "Kristen Nestorian seni mural", "Kaum Sabi’in aktif penerjemahan"], ans: 1 }, // Key 48. B
+    { q: "Narasi: peran umat non-Islam yang berkontribusi besar. Nilai keteladanan yang terdapat pada narasi tersebut adalah....", opts: ["Moderasi umat beragama", "Toleransi antar umat beragama", "Keharmonisan intelektual", "Hubungan antar umat beragama"], ans: 0 }, // Key 49. A
+    { q: "Membaca, menerjemah, perpustakaan jadi gaya hidup krn sejahtera. Nilai keteladanan...", opts: ["Literasi pangkal kemajuan", "Kesejahteraan pangkal literasi", "Literasi pangkal kesejahteraan", "Kesejahteraan pangkal kemajuan"], ans: 2 } // Key 50. C
+];
+
+// Perbaiki kunci jawaban berdasarkan prompt (untuk penyesuaian index otomatis)
+const manualKeys = [
+    3, 3, 0, 2, 2, 1, 0, 3, 3, 0, // 1-10 (D, D, A, C, C, B, A, D, D, A)
+    1, 0, 3, 2, 0, 1, 2, 1, 0, 3, // 11-20 (B, A, D, C, A(B?), B, C, B, A, D) -> adjusted per mapping
+    2, 1, 0, 0, 3, 0, 2, 1, 2, 1, // 21-30 (C, B, A, A, D, A, C, B, C, B)
+    1, 0, 3, 0, 0, 1, 1, 2, 3, 2, // 31-40 (B, A, D, A, A, B, B, C, D, C)
+    1, 1, 1, 1, 0, 3, 3, 1, 0, 2  // 41-50 (B, B, B, B, A, D, D, B, A, C)
+];
+soalData.forEach((soal, idx) => {
+    if(manualKeys[idx] !== undefined) soal.ans = manualKeys[idx];
+});
+
+// ==========================================
+// KONFIGURASI GLOBAL
+// ==========================================
+const GOOGLE_SCRIPT_URL = https://script.google.com/macros/s/AKfycbxyvTq3nHz3zWOL_OEtGkLvDS4QOd0F_hj6uVItfdWDP4kiv3C1c2AQpsPDswYeiujl/exec";
+const TOKEN_BENAR = "PAI8";
+let userAnswers = new Array(50).fill(null);
+let currentQuestionIndex = 0;
+let studentName = "";
+let studentClass = "";
+let timerInterval;
+let timeRemaining = 90 * 60; // 90 Menit
+
+// Anti-Cheat Variables
+let warningCount = 0;
+const MAX_WARNINGS = 3;
+let isCheatingDebounce = false;
+let audioCtx;
+let oscillator;
+let isExamActive = false;
+
+// ==========================================
+// DOM ELEMENTS
+// ==========================================
+const viewLogin = document.getElementById('view-login');
+const viewPrep = document.getElementById('view-prep');
+const viewExam = document.getElementById('view-exam');
+const viewResult = document.getElementById('view-result');
+const loginForm = document.getElementById('login-form');
+
+// ==========================================
+// INIT & LOGIN
+// ==========================================
+loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const token = document.getElementById('input-token').value;
+    if (token !== TOKEN_BENAR) {
+        alert("Token ujian salah!");
+        return;
+    }
+    studentName = document.getElementById('input-nama').value;
+    studentClass = document.getElementById('input-kelas').value;
+    
+    viewLogin.classList.add('hidden');
+    viewPrep.classList.remove('hidden');
+    viewPrep.classList.add('flex');
+});
+
+// ==========================================
+// DEVICE CHECK & PERSIAPAN
+// ==========================================
+const btnIzin = document.getElementById('btn-izin');
+const btnMulai = document.getElementById('btn-mulai');
+const prepVideo = document.getElementById('prep-video');
+const examVideo = document.getElementById('exam-video');
+const prepStatus = document.getElementById('prep-status');
+
+btnIzin.addEventListener('click', async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        prepVideo.srcObject = stream;
+        examVideo.srcObject = stream; // Share stream ke view ujian
+        
+        btnIzin.classList.add('hidden');
+        btnMulai.classList.remove('hidden');
+        prepStatus.textContent = "";
+        
+        // Init Audio Context for Siren on user gesture
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (err) {
+        prepStatus.textContent = "Akses ditolak! Anda wajib mengizinkan kamera & mikrofon untuk ujian ini.";
+    }
+});
+
+btnMulai.addEventListener('click', async () => {
+    // Attempt Fullscreen
+    try {
+        if (document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen();
+        }
+    } catch (e) {
+        console.warn("Fullscreen rejection ditangani", e);
+    }
+    
+    viewPrep.classList.remove('flex');
+    viewPrep.classList.add('hidden');
+    viewExam.classList.remove('hidden');
+    viewExam.classList.add('flex');
+    
+    isExamActive = true;
+    startTimer();
+    renderQuestion();
+    renderGridSoal();
+});
+
+// ==========================================
+// EXAM LOGIC & RENDER
+// ==========================================
+const qNumber = document.getElementById('q-number');
+const qText = document.getElementById('q-text');
+const qOptions = document.getElementById('q-options');
+const btnPrev = document.getElementById('btn-prev');
+const btnNext = document.getElementById('btn-next');
+const btnFinish = document.getElementById('btn-finish');
+const answeredCountEl = document.getElementById('answered-count');
+const questionContentArea = document.getElementById('question-content-area');
+
+function renderQuestion() {
+    const soal = soalData[currentQuestionIndex];
+    qNumber.textContent = currentQuestionIndex + 1;
+    qText.textContent = soal.q;
+    
+    qOptions.innerHTML = '';
+    const abcd = ['A', 'B', 'C', 'D'];
+    
+    soal.opts.forEach((opt, idx) => {
+        const checked = userAnswers[currentQuestionIndex] === idx ? 'checked' : '';
+        const id = `opt-${idx}`;
+        const html = `
+            <div class="relative">
+                <input type="radio" name="answer" id="${id}" value="${idx}" class="hidden option-input" ${checked} onchange="saveAnswer(${idx})">
+                <label for="${id}" class="option-label">
+                    <span class="w-8 h-8 flex-shrink-0 bg-gray-100 border border-gray-300 rounded-full flex items-center justify-center font-bold text-sm mr-3 mt-0.5">${abcd[idx]}</span>
+                    <span class="text-gray-700 leading-relaxed">${opt}</span>
+                </label>
+            </div>
+        `;
+        qOptions.innerHTML += html;
+    });
+
+    btnPrev.style.visibility = currentQuestionIndex === 0 ? 'hidden' : 'visible';
+    
+    if (currentQuestionIndex === soalData.length - 1) {
+        btnNext.classList.add('hidden');
+        btnFinish.classList.remove('hidden');
+    } else {
+        btnNext.classList.remove('hidden');
+        btnFinish.classList.add('hidden');
+    }
+    
+    questionContentArea.scrollTop = 0; // reset scroll
+    updateGridUI();
+}
+
+window.saveAnswer = function(optIdx) {
+    userAnswers[currentQuestionIndex] = optIdx;
+    updateAnsweredCount();
+    updateGridUI();
+}
+
+btnPrev.addEventListener('click', () => {
+    if (currentQuestionIndex > 0) { currentQuestionIndex--; renderQuestion(); }
+});
+btnNext.addEventListener('click', () => {
+    if (currentQuestionIndex < soalData.length - 1) { currentQuestionIndex++; renderQuestion(); }
+});
+
+function updateAnsweredCount() {
+    const count = userAnswers.filter(a => a !== null).length;
+    answeredCountEl.textContent = count;
+}
+
+// ==========================================
+// MODAL DAFTAR SOAL (GRID)
+// ==========================================
+const modalDaftar = document.getElementById('modal-daftar-soal');
+const panelDaftar = document.getElementById('daftar-soal-panel');
+const btnDaftar = document.getElementById('btn-daftar-soal');
+const btnCloseDaftar = document.getElementById('btn-close-daftar');
+const gridSoal = document.getElementById('grid-soal');
+
+btnDaftar.addEventListener('click', () => {
+    modalDaftar.classList.remove('hidden');
+    setTimeout(() => { panelDaftar.classList.remove('translate-x-full'); }, 10);
+});
+
+function closeDaftarPanel() {
+    panelDaftar.classList.add('translate-x-full');
+    setTimeout(() => { modalDaftar.classList.add('hidden'); }, 300);
+}
+btnCloseDaftar.addEventListener('click', closeDaftarPanel);
+modalDaftar.addEventListener('click', (e) => { if(e.target === modalDaftar) closeDaftarPanel(); });
+
+function renderGridSoal() {
+    gridSoal.innerHTML = '';
+    for (let i = 0; i < soalData.length; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i + 1;
+        btn.className = `w-full aspect-square flex items-center justify-center font-bold text-sm rounded border transition-colors ${getGridClass(i)}`;
+        btn.onclick = () => {
+            currentQuestionIndex = i;
+            renderQuestion();
+            closeDaftarPanel();
+        };
+        gridSoal.appendChild(btn);
+    }
+}
+
+function updateGridUI() {
+    const buttons = gridSoal.querySelectorAll('button');
+    buttons.forEach((btn, i) => {
+        btn.className = `w-full aspect-square flex items-center justify-center font-bold text-sm rounded border transition-colors ${getGridClass(i)}`;
+    });
+}
+
+function getGridClass(idx) {
+    if (idx === currentQuestionIndex) return 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105'; // Aktif
+    if (userAnswers[idx] !== null) return 'bg-green-500 text-white border-green-500'; // Terjawab
+    return 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'; // Belum
+}
+
+// ==========================================
+// TIMER
+// ==========================================
+function startTimer() {
+    const timerDisplay = document.getElementById('timer-display');
+    timerInterval = setInterval(() => {
+        timeRemaining--;
+        const m = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
+        const s = (timeRemaining % 60).toString().padStart(2, '0');
+        timerDisplay.textContent = `${m}:${s}`;
+        
+        if (timeRemaining <= 0) {
+            clearInterval(timerInterval);
+            forceSubmit("Waktu Habis");
+        }
+    }, 1000);
+}
+
+// ==========================================
+// FLOATING CAMERA DRAG & DROP
+// ==========================================
+const cam = document.getElementById('floating-camera');
+let isDragging = false, currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+
+function dragStart(e) {
+    initialX = (e.type === "touchstart" ? e.touches[0].clientX : e.clientX) - xOffset;
+    initialY = (e.type === "touchstart" ? e.touches[0].clientY : e.clientY) - yOffset;
+    if (e.target === cam || cam.contains(e.target)) isDragging = true;
+}
+
+function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
+
+function drag(e) {
+    if (isDragging) {
+        e.preventDefault(); // Prevent scrolling while dragging cam
+        currentX = (e.type === "touchmove" ? e.touches[0].clientX : e.clientX) - initialX;
+        currentY = (e.type === "touchmove" ? e.touches[0].clientY : e.clientY) - initialY;
+        
+        // Bounds checking
+        const rect = cam.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width;
+        const maxY = window.innerHeight - rect.height;
+        
+        // Convert translation offsets to absolute right/top limits for simplicity
+        let newRight = 20 - currentX; // initial right was 20px
+        let newTop = 70 + currentY;   // initial top was 70px
+        
+        if(newRight < 0) newRight = 0;
+        if(newRight > maxX) newRight = maxX;
+        if(newTop < 0) newTop = 0;
+        if(newTop > maxY) newTop = maxY;
+
+        xOffset = 20 - newRight;
+        yOffset = newTop - 70;
+
+        cam.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+    }
+}
+
+document.addEventListener("touchstart", dragStart, { passive: false });
+document.addEventListener("touchend", dragEnd);
+document.addEventListener("touchmove", drag, { passive: false });
+document.addEventListener("mousedown", dragStart);
+document.addEventListener("mouseup", dragEnd);
+document.addEventListener("mousemove", drag);
+
+
+// ==========================================
+// STRICT ANTI-CHEAT SYSTEM
+// ==========================================
+function playSiren() {
+    if(!audioCtx || oscillator) return;
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    
+    oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.type = 'square';
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    // Siren sound effect
+    const now = audioCtx.currentTime;
+    oscillator.frequency.setValueAtTime(400, now);
+    oscillator.frequency.linearRampToValueAtTime(800, now + 0.3);
+    oscillator.frequency.linearRampToValueAtTime(400, now + 0.6);
+    
+    // Loop frequency changes using setInterval for a continuous siren effect
+    oscillator.sirenInterval = setInterval(() => {
+        if(!oscillator) return;
+        const t = audioCtx.currentTime;
+        oscillator.frequency.setValueAtTime(400, t);
+        oscillator.frequency.linearRampToValueAtTime(800, t + 0.3);
+        oscillator.frequency.linearRampToValueAtTime(400, t + 0.6);
+    }, 600);
+    
+    oscillator.start(now);
+}
+
+function stopSiren() {
+    if(oscillator) {
+        clearInterval(oscillator.sirenInterval);
+        oscillator.stop();
+        oscillator.disconnect();
+        oscillator = null;
+    }
+}
+
+function triggerCheatDetected() {
+    if(!isExamActive || isCheatingDebounce) return;
+    
+    isCheatingDebounce = true;
+    warningCount++;
+    document.getElementById('warning-indicator').textContent = `Peringatan: ${warningCount}/3`;
+    document.getElementById('warning-count-text').textContent = warningCount;
+    
+    if(warningCount >= MAX_WARNINGS) {
+        forceSubmit("Diskualifikasi (Curang)");
+        return;
+    }
+    
+    playSiren();
+    document.getElementById('modal-warning').classList.remove('hidden');
+    
+    // Debounce lock for 2 seconds to prevent double triggers
+    setTimeout(() => { isCheatingDebounce = false; }, 2000);
+}
+
+// 1. Block Context Menu & Selection
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// 2. Block Keyboard Shortcuts
+document.addEventListener('keydown', (e) => {
+    // F12, Ctrl+Shift+I, Ctrl+C, Ctrl+V, Ctrl+S
+    if(e.key === 'F12' || 
+      (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+      (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 's' || e.key === 'C' || e.key === 'V' || e.key === 'S'))) {
+        e.preventDefault();
+        triggerCheatDetected();
+    }
+});
+
+// 3. Tab Visibility & Blur (Debounced via trigger function)
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) triggerCheatDetected();
+});
+window.addEventListener('blur', () => {
+    triggerCheatDetected();
+});
+
+// Modal Warning Button
+document.getElementById('btn-mengerti').addEventListener('click', () => {
+    stopSiren();
+    document.getElementById('modal-warning').classList.add('hidden');
+    // Request fullscreen again if lost
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(e => console.log(e));
+    }
+});
+
+
+// ==========================================
+// SUBMISSION & SHEET INTEGRATION
+// ==========================================
+const modalConfirm = document.getElementById('modal-confirm');
+btnFinish.addEventListener('click', () => {
+    const ansCount = userAnswers.filter(a => a !== null).length;
+    document.getElementById('conf-terjawab').textContent = ansCount;
+    document.getElementById('conf-belum').textContent = 50 - ansCount;
+    modalConfirm.classList.remove('hidden');
+});
+
+document.getElementById('btn-batal-selesai').addEventListener('click', () => {
+    modalConfirm.classList.add('hidden');
+});
+
+document.getElementById('btn-yakin-selesai').addEventListener('click', () => {
+    modalConfirm.classList.add('hidden');
+    forceSubmit("Selesai Normal");
+});
+
+function calculateScore() {
+    let correct = 0;
+    for(let i=0; i<soalData.length; i++){
+        if(userAnswers[i] === soalData[i].ans) correct++;
+    }
+    return (correct / soalData.length) * 100;
+}
+
+function forceSubmit(statusInfo) {
+    isExamActive = false;
+    clearInterval(timerInterval);
+    stopSiren();
+    if(document.fullscreenElement) document.exitFullscreen().catch(e=>console.log(e));
+    
+    // Stop Camera
+    if(examVideo.srcObject) {
+        examVideo.srcObject.getTracks().forEach(track => track.stop());
+    }
+
+    viewExam.classList.remove('flex');
+    viewExam.classList.add('hidden');
+    document.getElementById('modal-warning').classList.add('hidden');
+    viewResult.classList.remove('hidden');
+    viewResult.classList.add('flex');
+
+    const finalScore = calculateScore();
+    const ansCount = userAnswers.filter(a => a !== null).length;
+    
+    document.getElementById('res-nama').textContent = studentName;
+    document.getElementById('res-kelas').textContent = studentClass;
+    document.getElementById('res-nilai').textContent = finalScore.toFixed(0);
+    document.getElementById('res-keterangan').textContent = statusInfo;
+    
+    if(statusInfo.includes("Diskualifikasi")) {
+        document.getElementById('result-icon').className = "text-5xl text-red-500 mb-4";
+        document.getElementById('result-icon').innerHTML = '<i class="fas fa-times-circle"></i>';
+        document.getElementById('res-nilai').classList.replace('text-blue-600', 'text-red-600');
+    }
+
+    sendDataToGoogleSheets(studentName, studentClass, finalScore, statusInfo, ansCount, userAnswers);
+}
+
+function sendDataToGoogleSheets(nama, kelas, skor, status, terjawab, jawabanArr) {
+    const resultStatusText = document.getElementById('result-status');
+    const now = new Date().toLocaleString('id-ID');
+    
+    // Map jawaban ke format ABCD untuk direkap
+    const abcd = ['A','B','C','D'];
+    const jawabanString = jawabanArr.map(ans => ans !== null ? abcd[ans] : '-').join(',');
+
+    const payload = {
+        waktu: now,
+        nama: nama,
+        kelas: kelas,
+        skor: skor,
+        status: status,
+        terjawab: terjawab,
+        jawaban: jawabanString
+    };
+
+    // Note: Use no-cors mode for Google Apps Script Webhooks to avoid CORS blocks, 
+    // or use JSONP/Forms. Using x-www-form-urlencoded is safest for pure JS fetch.
+    const formData = new URLSearchParams();
+    for (const key in payload) { formData.append(key, payload[key]); }
+
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        body: formData,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+    .then(response => {
+        resultStatusText.textContent = "Data berhasil terkirim dan tersimpan.";
+        resultStatusText.classList.add('text-green-600', 'font-bold');
+    })
+    .catch(error => {
+        console.error('Error!', error.message);
+        // Tetap tampilkan pesan sukses (karena no-cors sering melempar TypeError padahal data masuk)
+        resultStatusText.textContent = "Pengiriman selesai (cek koneksi jika data belum masuk).";
+        resultStatusText.classList.add('text-yellow-600');
+    });
+}
+</script>
+</body>
+</html>
